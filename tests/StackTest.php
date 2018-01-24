@@ -1,16 +1,15 @@
 <?php
-
-declare(strict_types = 1);
+declare(strict_types=1);
 
 namespace Lookyman\Middleware;
 
 use Interop\Http\Factory\ResponseFactoryInterface;
-use Interop\Http\ServerMiddleware\DelegateInterface;
-use Interop\Http\ServerMiddleware\MiddlewareInterface;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\StreamInterface;
+use Psr\Http\Server\MiddlewareInterface;
+use Psr\Http\Server\RequestHandlerInterface;
 
 /**
  * @covers \Lookyman\Middleware\Stack
@@ -18,16 +17,16 @@ use Psr\Http\Message\StreamInterface;
 final class StackTest extends TestCase
 {
 
-	public function testEmpty()
+	public function testEmpty(): void
 	{
 		$response = $this->createMock(ResponseInterface::class);
 		$responseFactory = $this->createMock(ResponseFactoryInterface::class);
 		$responseFactory->expects(self::once())->method('createResponse')->with(200)->willReturn($response);
 		$stack = new Stack($responseFactory);
-		self::assertSame($response, $stack->process($this->createMock(ServerRequestInterface::class)));
+		self::assertSame($response, $stack->handle($this->createMock(ServerRequestInterface::class)));
 	}
 
-	public function testNonEmpty()
+	public function testNonEmpty(): void
 	{
 		$middleware = function (string $text): MiddlewareInterface {
 			return new class ($text) implements MiddlewareInterface {
@@ -42,9 +41,9 @@ final class StackTest extends TestCase
 					$this->text = $text;
 				}
 
-				public function process(ServerRequestInterface $request, DelegateInterface $delegate): ResponseInterface
+				public function process(ServerRequestInterface $request, RequestHandlerInterface $requestHandler): ResponseInterface
 				{
-					$response = $delegate->process($request);
+					$response = $requestHandler->handle($request);
 					$response->getBody()->write($this->text);
 					return $response;
 				}
@@ -63,7 +62,7 @@ final class StackTest extends TestCase
 		$stack = new Stack($responseFactory);
 		$stack->push($middleware('a'));
 		$stack->push($middleware('b'));
-		self::assertSame($response, $stack->process($this->createMock(ServerRequestInterface::class)));
+		self::assertSame($response, $stack->handle($this->createMock(ServerRequestInterface::class)));
 	}
 
 }

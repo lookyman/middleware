@@ -1,15 +1,14 @@
 <?php
-
-declare(strict_types = 1);
+declare(strict_types=1);
 
 namespace Lookyman\Middleware;
 
-use Interop\Http\ServerMiddleware\DelegateInterface;
-use Interop\Http\ServerMiddleware\MiddlewareInterface;
+use Psr\Http\Server\MiddlewareInterface;
+use Psr\Http\Server\RequestHandlerInterface;
 
-interface StackInterface extends DelegateInterface
+interface StackInterface extends RequestHandlerInterface
 {
 
-	public function push(MiddlewareInterface $middleware);
+	public function push(MiddlewareInterface $middleware): void;
 
 }

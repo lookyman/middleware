@@ -1,26 +1,25 @@
 <?php
-
-declare(strict_types = 1);
+declare(strict_types=1);
 
 namespace Lookyman\Middleware;
 
 use Interop\Http\Factory\ResponseFactoryInterface;
-use Interop\Http\ServerMiddleware\DelegateInterface;
-use Interop\Http\ServerMiddleware\MiddlewareInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
+use Psr\Http\Server\MiddlewareInterface;
+use Psr\Http\Server\RequestHandlerInterface;
 
 final class Stack implements StackInterface
 {
 
 	/**
-	 * @var DelegateInterface
+	 * @var RequestHandlerInterface
 	 */
 	private $top;
 
 	public function __construct(ResponseFactoryInterface $responseFactory)
 	{
-		$this->top = new class ($responseFactory) implements DelegateInterface
+		$this->top = new class ($responseFactory) implements RequestHandlerInterface
 		{
 
 			/**
@@ -33,7 +32,7 @@ final class Stack implements StackInterface
 				$this->responseFactory = $responseFactory;
 			}
 
-			public function process(ServerRequestInterface $request): ResponseInterface
+			public function handle(ServerRequestInterface $request): ResponseInterface
 			{
 				return $this->responseFactory->createResponse();
 			}
@@ -41,9 +40,9 @@ final class Stack implements StackInterface
 		};
 	}
 
-	public function push(MiddlewareInterface $middleware)
+	public function push(MiddlewareInterface $middleware): void
 	{
-		$this->top = new class ($middleware, $this->top) implements DelegateInterface
+		$this->top = new class ($middleware, $this->top) implements RequestHandlerInterface
 		{
 
 			/**
@@ -52,27 +51,27 @@ final class Stack implements StackInterface
 			private $middleware;
 
 			/**
-			 * @var DelegateInterface
+			 * @var RequestHandlerInterface
 			 */
-			private $delegate;
+			private $requestHandler;
 
-			public function __construct(MiddlewareInterface $middleware, DelegateInterface $delegate)
+			public function __construct(MiddlewareInterface $middleware, RequestHandlerInterface $requestHandler)
 			{
 				$this->middleware = $middleware;
-				$this->delegate = $delegate;
+				$this->requestHandler = $requestHandler;
 			}
 
-			public function process(ServerRequestInterface $request): ResponseInterface
+			public function handle(ServerRequestInterface $request): ResponseInterface
 			{
-				return $this->middleware->process($request, $this->delegate);
+				return $this->middleware->process($request, $this->requestHandler);
 			}
 
 		};
 	}
 
-	public function process(ServerRequestInterface $request): ResponseInterface
+	public function handle(ServerRequestInterface $request): ResponseInterface
 	{
-		return $this->top->process($request);
+		return $this->top->handle($request);
 	}
 
 }
